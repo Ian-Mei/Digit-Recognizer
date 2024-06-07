@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Drawing</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+    <button id="saveButton">Save Canvas</button>
+    <button id="clearButton">Clear Canvas</button>
+</head>
+<body>
+    <canvas id="myCanvas" width="420" height="420"></canvas>
+    <h1>{{prediction_text}}</h1>
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const context = canvas.getContext('2d');
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+    
+            context.lineWidth = 20;
+            context.lineCap = 'round';
+            context.strokeStyle = 'white';
+            context.beginPath();
+            context.moveTo(lastX, lastY);
+            context.lineTo(e.offsetX, e.offsetY);
+            context.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        document.getElementById('clearButton').addEventListener('click', function() {
+            let context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'black';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        
+        document.getElementById('saveButton').addEventListener('click', function() {
+            let context = canvas.getContext('2d');
+            let canvas1 = document.getElementById('myCanvas');
+            let image = new Image();
+            image.onload = function() {
+                let resizedArray = resizeImage(image);
+                
+                fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        resizedArray: resizedArray
+                    })
+                })
+                .then(response => response.json())
+                .then(data => console.log(data));
+            };
+            image.src = canvas1.toDataURL();
+        });
+        function resizeImage(image) {
+            // Create a temporary canvas element
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 28;
+            tempCanvas.height = 28;
+        
+            // Draw the image onto the canvas, resizing it
+            let tempContext = tempCanvas.getContext('2d');
+            tempContext.drawImage(image, 0, 0, 28, 28);
+        
+            // Get the image data from the resized image
+            let imageData = tempContext.getImageData(0, 0, 28, 28);
+            let data = imageData.data;
+        
+            // Create an array to hold the grayscale values
+            let grayscaleArray = [];
+        
+            // Iterate over each pixel and convert it to grayscale
+            for(let i = 0; i < data.length; i += 4) {
+                let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                grayscaleArray.push(avg);
+            }
+            
+            grayscaleArray = grayscaleArray.map(x => x / 255);
+
+            return grayscaleArray;
+        }
+        
+    </script>
+</body>
+</html>
