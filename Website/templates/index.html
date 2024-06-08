@@ -3,16 +3,54 @@
 <head>
     <title>Canvas Drawing</title>
     <style>
-        canvas {
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        #myCanvas {
+            border: 1px solid black;
+            justify-self: center;
+        }
+        #predictionText {
+            text-align: center;
+        }
+        .bar {
+            width: 30px;
+            margin: 2px;
+            display: inline-block;
+            text-align: center;
+        }
+        .bar-chart {
+            display: flex;
+            justify-content: space-around;
             border: 1px solid black;
         }
+        .bar-label {
+            margin-top: 5px;
+            text-align: center;
+        }
+        .bar-percentage {
+            text-align: center;
+            font-size: 0.8em;
+        }
     </style>
-    <button id="saveButton">Save Canvas</button>
-    <button id="clearButton">Clear Canvas</button>
+    <div>
+        <h1>Digit Number Predictor!</h1>
+    </div> 
+    <div class="buttons">
+        <button id="saveButton">Predict my Number!</button>
+        <button id="clearButton">Clear Canvas</button>
+    </div>
+    
 </head>
 <body>
     <canvas id="myCanvas" width="420" height="420"></canvas>
-    <h1>{{prediction_text}}</h1>
+    <h1 id="predictionText"></h1>
+    <div id="barChart" class="bar-chart"></div>
     <script>
         const canvas = document.getElementById('myCanvas');
         const context = canvas.getContext('2d');
@@ -49,6 +87,10 @@
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
 
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+
         document.getElementById('clearButton').addEventListener('click', function() {
             let context = canvas.getContext('2d');
             context.clearRect(0, 0, canvas.width, canvas.height);
@@ -56,7 +98,6 @@
             context.fillRect(0, 0, canvas.width, canvas.height);
         });
 
-        
         document.getElementById('saveButton').addEventListener('click', function() {
             let context = canvas.getContext('2d');
             let canvas1 = document.getElementById('myCanvas');
@@ -74,28 +115,26 @@
                     })
                 })
                 .then(response => response.json())
-                .then(data => console.log(data));
+                .then(data => {
+                    displayPrediction(data.predicted_digit, data.prediction_confidences);
+                });
             };
             image.src = canvas1.toDataURL();
         });
+
         function resizeImage(image) {
-            // Create a temporary canvas element
             let tempCanvas = document.createElement('canvas');
             tempCanvas.width = 28;
             tempCanvas.height = 28;
         
-            // Draw the image onto the canvas, resizing it
             let tempContext = tempCanvas.getContext('2d');
             tempContext.drawImage(image, 0, 0, 28, 28);
         
-            // Get the image data from the resized image
             let imageData = tempContext.getImageData(0, 0, 28, 28);
             let data = imageData.data;
         
-            // Create an array to hold the grayscale values
             let grayscaleArray = [];
         
-            // Iterate over each pixel and convert it to grayscale
             for(let i = 0; i < data.length; i += 4) {
                 let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
                 grayscaleArray.push(avg);
@@ -105,7 +144,35 @@
 
             return grayscaleArray;
         }
-        
+
+        function displayPrediction(predictedDigit, predictionConfidences) {
+            document.getElementById('predictionText').innerText = 'Predicted Digit: ' + predictedDigit;
+
+            let barChart = document.getElementById('barChart');
+            barChart.innerHTML = '';
+            for (let i = 0; i < predictionConfidences.length; i++) {
+                let barContainer = document.createElement('div');
+                barContainer.className = 'bar';
+
+                let bar = document.createElement('div');
+                bar.style.height = predictionConfidences[i] * 100 + 'px';
+                bar.style.backgroundColor = 'blue';
+                bar.title = i + ': ' + (predictionConfidences[i] * 100).toFixed(2) + '%';
+
+                let label = document.createElement('div');
+                label.className = 'bar-label';
+                label.innerText = i;
+
+                let percentage = document.createElement('div');
+                percentage.className = 'bar-percentage';
+                percentage.innerText = (predictionConfidences[i] * 100).toFixed(2) + '%';
+
+                barContainer.appendChild(bar);
+                barContainer.appendChild(label);
+                barContainer.appendChild(percentage);
+                barChart.appendChild(barContainer);
+            }
+        }
     </script>
 </body>
 </html>
