@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import numpy as np
 import pickle
-
+import cv2 as cv
 app = Flask(__name__)
 
 # Load the model
@@ -28,7 +28,7 @@ def predict():
         predictions = model.predict(image_array)
         predicted_digit = np.argmax(predictions, axis=1)[0]
         prediction_confidences = predictions[0].tolist()
-
+    
         return jsonify(predicted_digit=int(predicted_digit), prediction_confidences=prediction_confidences)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
